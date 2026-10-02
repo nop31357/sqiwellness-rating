@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SQI Wellness · Badminton Vote</title>
@@ -160,23 +161,16 @@ footer{text-align:center;color:var(--mut);font-size:.85rem;margin-top:40px}
 <div class="toast" id="toast" role="alert"></div>
 
 <script type="module">
-/* ============ FIREBASE CONFIG: ใส่ค่าจริงจาก Firebase Project ของคุณ ============ */
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-/* ================================================================================ */
+/* ============ SUPABASE CONFIG: ใส่ URL และ Anon Key จาก Supabase ============ */
+const SUPABASE_URL = "https://gzdcwxtybtdbdnbmykrg.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6ZGN3eHR5YnRkYmRuYm15a3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5MDE0OTAsImV4cCI6MjEwNjQ3NzQ5MH0.9pyeyOgQTd16ZUMRIBu68eE0ASvg6ujJLGP1jD_m-Ak";
+/* ============================================================================ */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, writeBatch, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const SEED = ["Stamp","Boom","Eak","Keng","NaMuay","Nonny","Nopporn","Due","Mek","Tk","Petch","Alp","Namnueng","Siri","Dejper","Praew","Sunny","Micky","Opoor","Ae"];
 const MAX_PLAYERS = 100;
-const DEMO = firebaseConfig.apiKey === "YOUR_API_KEY";
+const DEMO = SUPABASE_URL.includes("YOUR_PROJECT_ID");
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const withTimeout = (p, ms = 15000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
@@ -185,10 +179,10 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 
-/* ---------- Local identity (ไม่เก็บชื่อ — เป็นรหัสสุ่มต่อเบราว์เซอร์) ---------- */
+/* ---------- Local identity ---------- */
 let voterId = LS.get("badminton_voter_id", null);
 if (!voterId) { voterId = self.crypto?.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36)); LS.set("badminton_voter_id", voterId); }
-const myRated = new Set(LS.get("badminton_rated_ids", []));   // id ผู้เล่นที่เบราว์เซอร์นี้ให้คะแนนแล้ว
+const myRated = new Set(LS.get("badminton_rated_ids", []));
 
 /* ---------- State ---------- */
 let players = [], votes = [];
@@ -201,9 +195,7 @@ function toast(msg) {
   clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 3200);
 }
 
-/* ---------- Storage layer (Firestore or local demo) ---------- */
-let db;
-if (!DEMO) db = getFirestore(initializeApp(firebaseConfig)); else $("demoNote").hidden = false;
+if (DEMO) $("demoNote").hidden = false;
 
 const bus = new EventTarget();
 const emit = () => bus.dispatchEvent(new Event("change"));
@@ -211,34 +203,53 @@ window.addEventListener("storage", emit);
 const demo = { players: () => LS.get("badminton_demo_players", []), votes: () => LS.get("badminton_demo_votes", []) };
 const uid = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
+/* ---------- Storage layer (Supabase / Local demo) ---------- */
 function listen(name, getDemo, cb) {
   if (DEMO) { const f = () => cb(getDemo()); bus.addEventListener("change", f); f(); return; }
-  onSnapshot(collection(db, name), snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-    err => { console.error(err); toast("โหลดข้อมูลไม่สำเร็จ"); });
+  
+  // ดึงข้อมูลครั้งแรก
+  supabase.from(name).select("*").then(({ data, error }) => {
+    if (error) { console.error(error); toast("โหลดข้อมูลไม่สำเร็จ"); return; }
+    cb(data || []);
+  });
+
+  // ฟังค่าเปลี่ยนแปลง Realtime
+  supabase.channel('public:' + name)
+    .on('postgres_changes', { event: '*', schema: 'public', table: name }, () => {
+      supabase.from(name).select("*").then(({ data }) => { if (data) cb(data); });
+    })
+    .subscribe();
 }
+
 async function addPlayer(name) {
-  if (DEMO) { const l = demo.players(); l.push({ id: uid(), name, createdAt: Date.now() }); LS.set("badminton_demo_players", l); emit(); return; }
-  await addDoc(collection(db, "players"), { name, createdAt: serverTimestamp() });
+  if (DEMO) { const l = demo.players(); l.push({ id: uid(), name, created_at: Date.now() }); LS.set("badminton_demo_players", l); emit(); return; }
+  const { error } = await supabase.from('players').insert([{ name }]);
+  if (error) throw error;
 }
+
 async function removePlayer(id) {
   if (DEMO) { LS.set("badminton_demo_players", demo.players().filter(p => p.id !== id)); emit(); return; }
-  await deleteDoc(doc(db, "players", id));
-}
-async function seedPlayers() {
-  if (DEMO) { const t = Date.now(); LS.set("badminton_demo_players", SEED.map((name, i) => ({ id: uid(), name, createdAt: t, order: i }))); emit(); return; }
-  const batch = writeBatch(db);
-  SEED.forEach((name, i) => batch.set(doc(collection(db, "players")), { name, order: i, createdAt: serverTimestamp() }));
-  await batch.commit();
-}
-async function saveVote(scores) {
-  if (DEMO) { const v = demo.votes(); v.push({ voter: voterId, scores, createdAt: Date.now() }); LS.set("badminton_demo_votes", v); emit(); return; }
-  await addDoc(collection(db, "votes"), { voter: voterId, scores, createdAt: serverTimestamp() });
+  const { error } = await supabase.from('players').delete().eq('id', id);
+  if (error) throw error;
 }
 
-const tsOf = p => p.createdAt?.toMillis ? p.createdAt.toMillis() : (typeof p.createdAt === "number" ? p.createdAt : Number.MAX_SAFE_INTEGER);
+async function seedPlayers() {
+  if (DEMO) { const t = Date.now(); LS.set("badminton_demo_players", SEED.map((name, i) => ({ id: uid(), name, created_at: t, order: i }))); emit(); return; }
+  const rows = SEED.map((name, i) => ({ name, order: i }));
+  const { error } = await supabase.from('players').insert(rows);
+  if (error) throw error;
+}
+
+async function saveVote(scores) {
+  if (DEMO) { const v = demo.votes(); v.push({ voter: voterId, scores, created_at: Date.now() }); LS.set("badminton_demo_votes", v); emit(); return; }
+  const { error } = await supabase.from('votes').insert([{ voter: voterId, scores }]);
+  if (error) throw error;
+}
+
+const tsOf = p => p.created_at ? new Date(p.created_at).getTime() : Number.MAX_SAFE_INTEGER;
 const sortPlayers = l => [...l].filter(p => p && typeof p.name === "string").sort((a, b) => tsOf(a) - tsOf(b) || (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name, "th"));
 
-/* ---------- Members ---------- */
+/* ---------- Members UI ---------- */
 function renderMembers() {
   $("memCount").textContent = players.length;
   $("chips").innerHTML = players.map(p => `<span class="chip">${esc(p.name)}<button type="button" data-del="${esc(p.id)}" aria-label="ลบ ${esc(p.name)}" title="ลบ">✕</button></span>`).join("");
