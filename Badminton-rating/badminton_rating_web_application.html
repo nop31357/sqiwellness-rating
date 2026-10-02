@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-[#F5F8FC]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badminton Rating - ระบบประเมินและจัดอันดับนักแบดมินตัน</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            800: '#0B2340',
+                            900: '#071B2E',
+                            950: '#04101D'
+                        },
+                        brand: {
+                            blue: '#1677FF',
+                            blueHover: '#0958D9',
+                            green: '#19A974',
+                            greenLight: '#E6F7F0',
+                            bg: '#F5F8FC'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans Thai', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Supabase Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', 'Noto Sans Thai', sans-serif; }
+        .smooth-shadow { box-shadow: 0 10px 30px -5px rgba(7, 27, 46, 0.05); }
+        .card-shadow { box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.03); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-800 bg-[#F5F8FC] antialiased selection:bg-brand-blue selection:text-white">
+
+    <div id="app" class="min-h-screen flex flex-col md:flex-row relative">
+
+        <!-- DESKTOP SIDEBAR -->
+        <aside id="desktop-sidebar" class="hidden md:flex flex-col w-64 bg-navy-900 text-white min-h-screen fixed left-0 top-0 bottom-0 z-30 transition-all duration-300 border-r border-slate-800">
+            <div class="p-6 flex items-center justify-between border-b border-slate-800/60">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('dashboard')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-teal-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <i data-lucide="activity" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-tight text-white">Badminton</h1>
+                        <p class="text-xs text-blue-400 font-medium tracking-wider uppercase">Rating SaaS</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto custom-scrollbar">
+                <a href="#" onclick="navigateTo('dashboard'); return false;" id="nav-dashboard" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 hover:text-white">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span data-i18n="nav_dashboard">หน้าหลัก</span>
+                </a>
+                <a href="#" onclick="navigateTo('sessions'); return false;" id="nav-sessions" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 hover:text-white">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                    <span data-i18n="nav_sessions">เซสชันการตี</span>
+                </a>
+                <a href="#" onclick="navigateTo('ranking'); return false;" id="nav-ranking" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 hover:text-white">
+                    <i data-lucide="trophy" class="w-5 h-5"></i>
+                    <span data-i18n="nav_ranking">อันดับสมาชิก</span>
+                </a>
+                <a href="#" onclick="navigateTo('members'); return false;" id="nav-members" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 hover:text-white">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                    <span data-i18n="nav_members">รายชื่อเพื่อน</span>
+                </a>
+                <a href="#" onclick="navigateTo('profile'); return false;" id="nav-profile" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 hover:text-white">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                    <span data-i18n="nav_profile">โปรไฟล์ของฉัน</span>
+                </a>
+                
+                <!-- Admin specific navigation links -->
+                <div id="admin-nav-section" class="pt-4 mt-4 border-t border-slate-800/80">
+                    <p class="px-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2" data-i18n="admin_section">ผู้ดูแลระบบ</p>
+                    <a href="#" onclick="navigateTo('reports'); return false;" id="nav-reports" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 hover:text-white">
+                        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                        <span data-i18n="nav_reports">รายงานวิเคราะห์</span>
+                    </a>
+                    <a href="#" onclick="navigateTo('settings'); return false;" id="nav-settings" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 hover:text-white">
+                        <i data-lucide="settings" class="w-5 h-5"></i>
+                        <span data-i18n="nav_settings">ตั้งค่าระบบ</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800/80 bg-navy-950/40">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 transition-all cursor-pointer" onclick="navigateTo('profile')">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <img id="sidebar-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" class="w-9 h-9 rounded-full object-cover border border-slate-600 flex-shrink-0" alt="Avatar">
+                        <div class="overflow-hidden">
+                            <p id="sidebar-user-name" class="text-sm font-semibold text-white truncate">Nopchai</p>
+                            <p id="sidebar-user-role" class="text-xs text-slate-400 truncate">สมาชิก</p>
+                        </div>
+                    </div>
+                    <button onclick="logout(); event.stopPropagation();" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700/50 rounded-lg transition-all" title="ออกจากระบบ">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTAINER -->
+        <main class="flex-1 md:ml-64 flex flex-col min-h-screen pb-20 md:pb-8">
+
+            <header class="h-16 bg-white border-b border-slate-200/80 px-4 md:px-8 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+                <!-- Left: Title or Mobile Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="md:hidden flex items-center space-x-2">
+                        <div class="w-8 h-8 rounded-lg bg-brand-blue flex items-center justify-center text-white">
+                            <i data-lucide="activity" class="w-5 h-5"></i>
+                        </div>
+                        <span class="font-bold text-slate-900">Badminton Rating</span>
+                    </div>
+                    <h2 id="page-title" class="hidden md:block text-xl font-bold text-slate-800">หน้าหลัก</h2>
+                </div>
+
+                <!-- Right Controls: Status, Language Switcher, Notifications, User -->
+                <div class="flex items-center space-x-3">
+                    <!-- Data Mode Badge -->
+                    <div id="data-source-badge" class="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title="โหมดฐานข้อมูล">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="data-source-text">Mock Data</span>
+                    </div>
+
+                    <!-- Language Switcher -->
+                    <button onclick="toggleLanguage()" class="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all">
+                        <i data-lucide="globe" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span id="current-lang-label">TH</span>
+                    </button>
+
+                    <!-- Notifications -->
+                    <button class="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all relative">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-blue rounded-full"></span>
+                    </button>
+
+                    <!-- Top Avatar Quick Switcher -->
+                    <div class="relative">
+                        <button onclick="toggleUserDropdown()" class="flex items-center space-x-2 focus:outline-none">
+                            <img id="top-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" class="w-8 h-8 rounded-full object-cover border border-slate-200" alt="Profile">
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+                        </button>
+                        <!-- Dropdown Menu -->
+                        <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50">
+                            <div class="px-4 py-2 border-b border-slate-100">
+                                <p id="dropdown-user-name" class="font-bold text-sm text-slate-800">Nopchai</p>
+                                <p id="dropdown-user-sub" class="text-xs text-slate-500">nopchai@badminton.local</p>
+                            </div>
+                            <a href="#" onclick="navigateTo('profile'); hideUserDropdown(); return false;" class="flex items-center space-x-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                                <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
+                                <span data-i18n="view_profile">ดูโปรไฟล์</span>
+                            </a>
+                            <a href="#" onclick="navigateTo('settings'); hideUserDropdown(); return false;" class="flex items-center space-x-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                                <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+                                <span data-i18n="settings">ตั้งค่า</span>
+                            </a>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <button onclick="logout(); hideUserDropdown();" class="w-full text-left flex items-center space-x-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 font-medium">
+                                <i data-lucide="log-out" class="w-4 h-4 text-rose-500"></i>
+                                <span data-i18n="logout">ออกจากระบบ</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div id="content-area" class="p-4 md:p-8 max-w-7xl w-full mx-auto flex-1">
+
+                <!-- 1. LOGIN VIEW -->
+                <div id="view-login" class="view-panel hidden min-h-[80vh] flex items-center justify-center py-6">
+                    <div class="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden grid grid-cols-1 md:grid-cols-2">
+                        <!-- Left Banner Image/Gradient -->
+                        <div class="bg-gradient-to-br from-navy-900 via-slate-900 to-navy-800 p-8 md:p-12 text-white flex flex-col justify-between relative overflow-hidden">
+                            <div class="absolute -right-10 -bottom-10 w-60 h-60 bg-brand-blue/20 rounded-full blur-3xl"></div>
+                            <div>
+                                <div class="inline-flex items-center space-x-2 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-md mb-6 border border-white/10">
+                                    <i data-lucide="activity" class="w-4 h-4 text-teal-400"></i>
+                                    <span class="text-xs font-semibold tracking-wide">Badminton SaaS Platform</span>
+                                </div>
+                                <h2 class="text-3xl font-extrabold leading-tight text-white mb-4">
+                                    ตีวันนี้<br><span class="text-teal-400">คะแนนดีขึ้นได้ทุกวัน</span>
+                                </h2>
+                                <p class="text-slate-300 text-sm leading-relaxed">
+                                    ให้เพื่อนประเมินฝีมือการตีแบดมินตันในแต่ละครั้ง แบบง่ายๆ วิเคราะห์จุดแข็งและจุดพัฒนาได้อย่างแม่นยำ
+                                </p>
+                            </div>
+                            <div class="mt-8 space-y-4">
+                                <div class="flex items-center space-x-3 text-sm text-slate-300">
+                                    <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-teal-400">
+                                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                    </div>
+                                    <span>วิเคราะห์ 5 ทักษะสำคัญในเกม</span>
+                                </div>
+                                <div class="flex items-center space-x-3 text-sm text-slate-300">
+                                    <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-teal-400">
+                                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                    </div>
+                                    <span>จัดอันดับความสามารถแบบยุติธรรม</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Form -->
+                        <div class="p-8 md:p-12 flex flex-col justify-center">
+                            <div class="mb-6">
+                                <h3 class="text-2xl font-bold text-slate-900" data-i18n="login_title">เข้าสู่ระบบ</h3>
+                                <p class="text-slate-500 text-sm mt-1" data-i18n="login_subtitle">เลือกประเภทผู้ใช้งานและกรอกข้อมูลเพื่อเริ่มต้น</p>
+                            </div>
+
+                            <!-- Login Type Tabs -->
+                            <div class="flex p-1 bg-slate-100 rounded-xl mb-6">
+                                <button onclick="setLoginType('member')" id="tab-login-member" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white text-slate-800 shadow-sm">
+                                    สมาชิก (Member)
+                                </button>
+                                <button onclick="setLoginType('admin')" id="tab-login-admin" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 hover:text-slate-800">
+                                    ผู้ดูแลระบบ (Admin)
+                                </button>
+                            </div>
+
+                            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                                <div id="username-field">
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" data-i18n="username">ชื่อผู้ใช้งาน</label>
+                                    <div class="relative">
+                                        <i data-lucide="user" class="w-5 h-5 absolute left-3 top-3 text-slate-400"></i>
+                                        <input type="text" id="login-username" required placeholder="เช่น nopchai หรือ admin" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" id="login-pwd-label" data-i18n="password_or_pin">รหัส PIN / รหัสผ่าน</label>
+                                    <div class="relative">
+                                        <i data-lucide="lock" class="w-5 h-5 absolute left-3 top-3 text-slate-400"></i>
+                                        <input type="password" id="login-password" required placeholder="••••" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm">
+                                    </div>
+                                </div>
+
+                                <div id="login-error" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium"></div>
+
+                                <button type="submit" class="w-full py-3 bg-brand-blue hover:bg-brand-blueHover text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center space-x-2">
+                                    <span data-i18n="login_button">เข้าสู่ระบบ</span>
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+
+                            <!-- Demo Quick Login Buttons -->
+                            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                                <p class="text-xs text-slate-400 mb-3" data-i18n="quick_demo_login">ทดสอบเข้าสู่ระบบแบบรวดเร็ว (Demo Quick Login)</p>
+                                <div class="flex flex-wrap gap-2 justify-center">
+                                    <button onclick="quickLogin('admin')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-all">
+                                        🛡️ Admin
+                                    </button>
+                                    <button onclick="quickLogin('nopchai')" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold transition-all">
+                                        🏸 Nopchai
+                                    </button>
+                                    <button onclick="quickLogin('aof')" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold transition-all">
+                                        🏸 Aof
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. DASHBOARD VIEW -->
+                <div id="view-dashboard" class="view-panel space-y-6">
+                    <!-- Banner Greeting -->
+                    <div class="bg-gradient-to-r from-navy-900 via-slate-800 to-brand-blue p-6 md:p-8 rounded-3xl text-white shadow-xl relative overflow-hidden">
+                        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2">
+                                    <span>สวัสดี</span> <span id="dash-greeting-name">Nopchai</span>! 👋
+                                </h2>
+                                <p class="text-slate-200 text-sm mt-1" data-i18n="dash_subtitle">พร้อมพัฒนาฝีมือและประเมินผลการตีแบดมินตันกันหรือยัง?</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="navigateTo('create_session')" class="px-5 py-2.5 bg-white text-navy-900 font-bold text-sm rounded-2xl hover:bg-slate-100 transition-all shadow-md flex items-center space-x-2">
+                                    <i data-lucide="plus-circle" class="w-4 h-4 text-brand-blue"></i>
+                                    <span data-i18n="btn_create_session">สร้างเซสชันใหม่</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Key Metrics Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- Stat 1 -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow flex flex-col justify-between">
+                            <div class="flex items-center justify-between text-slate-500 mb-2">
+                                <span class="text-xs font-semibold uppercase tracking-wider" data-i18n="stat_avg_rating">คะแนนเฉลี่ยรวม</span>
+                                <div class="w-8 h-8 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center">
+                                    <i data-lucide="star" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-baseline space-x-1">
+                                    <span id="dash-stat-score">8.2</span>
+                                    <span class="text-xs text-slate-400 font-normal">/ 10</span>
+                                </div>
+                                <span class="text-xs font-medium text-emerald-600 flex items-center mt-1">
+                                    <i data-lucide="trending-up" class="w-3 h-3 mr-1"></i> +0.3 จากครั้งก่อน
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Stat 2 -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow flex flex-col justify-between">
+                            <div class="flex items-center justify-between text-slate-500 mb-2">
+                                <span class="text-xs font-semibold uppercase tracking-wider" data-i18n="stat_total_sessions">จำนวนครั้งที่ตี</span>
+                                <div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-baseline space-x-1">
+                                    <span id="dash-stat-sessions">12</span>
+                                    <span class="text-xs text-slate-400 font-normal" data-i18n="times">ครั้ง</span>
+                                </div>
+                                <span class="text-xs font-medium text-slate-500 mt-1 block" data-i18n="stat_active_month">ในเดือนนี้ 4 ครั้ง</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat 3 -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow flex flex-col justify-between">
+                            <div class="flex items-center justify-between text-slate-500 mb-2">
+                                <span class="text-xs font-semibold uppercase tracking-wider" data-i18n="stat_group_members">เพื่อนในกลุ่ม</span>
+                                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                    <i data-lucide="users" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-baseline space-x-1">
+                                    <span id="dash-stat-members">5</span>
+                                    <span class="text-xs text-slate-400 font-normal" data-i18n="people">คน</span>
+                                </div>
+                                <span class="text-xs font-medium text-slate-500 mt-1 block" data-i18n="stat_active_now">ผู้ร่วมทีมประจำ</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat 4 -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow flex flex-col justify-between">
+                            <div class="flex items-center justify-between text-slate-500 mb-2">
+                                <span class="text-xs font-semibold uppercase tracking-wider" data-i18n="stat_level">ระดับทักษะ</span>
+                                <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                    <i data-lucide="award" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <span id="dash-stat-level-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-brand-blue">
+                                    Advanced
+                                </span>
+                                <p class="text-xs text-slate-500 mt-1" data-i18n="stat_level_rank">อ้างอิงจากระบบ 6 ระดับ</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Grid Content -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Recent Sessions List (2 Cols) -->
+                        <div class="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-100 card-shadow space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-900" data-i18n="recent_sessions_title">การดีล่าสุด</h3>
+                                    <p class="text-xs text-slate-500" data-i18n="recent_sessions_sub">ประวัติและคะแนนเฉลี่ยจากเพื่อนร่วมก๊วน</p>
+                                </div>
+                                <a href="#" onclick="navigateTo('sessions'); return false;" class="text-xs font-semibold text-brand-blue hover:underline flex items-center space-x-1">
+                                    <span data-i18n="view_all">ดูทั้งหมด</span>
+                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                                </a>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="text-xs font-bold text-slate-400 uppercase border-b border-slate-100">
+                                            <th class="pb-3 px-2" data-i18n="th_date">วันที่</th>
+                                            <th class="pb-3 px-2" data-i18n="th_venue">สนาม</th>
+                                            <th class="pb-3 px-2" data-i18n="th_players">ผู้เล่น</th>
+                                            <th class="pb-3 px-2 text-right" data-i18n="th_avg_score">คะแนนเฉลี่ย</th>
+                                            <th class="pb-3 px-2 text-right"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dash-sessions-tbody" class="divide-y divide-slate-50 text-sm">
+                                        <!-- Dynamic Insertion -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Progress Radar / Skill Breakdown Card -->
+                        <div class="bg-white rounded-3xl p-6 border border-slate-100 card-shadow space-y-4">
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-900" data-i18n="skill_summary_title">ภาพรวมทักษะ</h3>
+                                <p class="text-xs text-slate-500" data-i18n="skill_summary_sub">ประเมินผลแยกตาม 5 ด้านสำคัญ</p>
+                            </div>
+                            <div class="relative flex items-center justify-center py-2">
+                                <canvas id="dash-skill-chart" class="max-h-56"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. SESSIONS LIST VIEW -->
+                <div id="view-sessions" class="view-panel hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900" data-i18n="sessions_header">ประวัติการตีแบดมินตัน</h2>
+                            <p class="text-slate-500 text-sm" data-i18n="sessions_subheader">รวมเซสชันทั้งหมดที่มีการบันทึกและประเมินผลคะแนน</p>
+                        </div>
+                        <button onclick="navigateTo('create_session')" class="px-5 py-2.5 bg-brand-blue hover:bg-brand-blueHover text-white font-semibold rounded-2xl transition-all shadow-md flex items-center space-x-2">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span data-i18n="btn_create_session">สร้างเซสชันใหม่</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-3xl p-6 border border-slate-100 card-shadow">
+                        <div id="sessions-list-container" class="space-y-4">
+                            <!-- Rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. CREATE SESSION VIEW -->
+                <div id="view-create_session" class="view-panel hidden max-w-2xl mx-auto space-y-6">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="navigateTo('dashboard')" class="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <h2 class="text-2xl font-bold text-slate-900" data-i18n="create_session_title">สร้างเซสชันการตีแบด</h2>
+                    </div>
+
+                    <form onsubmit="handleCreateSession(event)" class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 card-shadow space-y-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2" data-i18n="label_date">วันที่ตี</label>
+                            <input type="date" id="cs-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2" data-i18n="label_venue">สนามแบดมินตัน</label>
+                            <input type="text" id="cs-venue" required placeholder="เช่น สนาม A, Court 1, Winner Sports" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2" data-i18n="label_players">เลือกผู้ร่วมก๊วน (ผู้เล่นที่เข้าร่วม)</label>
+                            <div id="cs-players-checkboxes" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto p-3 border border-slate-200 rounded-xl">
+                                <!-- Checkboxes dynamic -->
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1" data-i18n="cs_players_note">* คุณจะถูกเลือกโดยอัตโนมัติ</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2" data-i18n="label_notes">บันทึกเพิ่มเติม (Optional)</label>
+                            <textarea id="cs-notes" rows="2" placeholder="เช่น ตีคู่ผสม 2 ชั่วโมง, ลูก RSL Gold" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full py-3.5 bg-brand-blue hover:bg-brand-blueHover text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center space-x-2">
+                            <i data-lucide="play-circle" class="w-5 h-5"></i>
+                            <span data-i18n="btn_start_rating">เริ่มให้คะแนน</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 5. RATING WIZARD VIEW -->
+                <div id="view-rate_wizard" class="view-panel hidden max-w-3xl mx-auto space-y-6">
+                    <!-- Progress Bar Header -->
+                    <div class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow space-y-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <span id="rate-step-indicator" class="font-bold text-brand-blue">ประเมินผู้เล่น 1 จาก 3</span>
+                            <span id="rate-target-name" class="font-bold text-slate-900">Bank</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div id="rate-progress-bar" class="bg-brand-blue h-full transition-all duration-300" style="width: 33%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Target Player Card -->
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 card-shadow space-y-6">
+                        <div class="flex items-center space-x-4 pb-6 border-b border-slate-100">
+                            <img id="rate-player-avatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" class="w-16 h-16 rounded-2xl object-cover border-2 border-brand-blue shadow-md" alt="Player">
+                            <div>
+                                <h3 id="rate-player-display-name" class="text-xl font-extrabold text-slate-900">Bank</h3>
+                                <span class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-semibold" data-i18n="teammate">เพื่อนร่วมทีม</span>
+                            </div>
+                        </div>
+
+                        <!-- 5 Skill Categories Scale -->
+                        <div class="space-y-6">
+                            <!-- Skill 1: Smash -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+                                        <i data-lucide="zap" class="w-4 h-4 text-amber-500"></i>
+                                        <span>ลูกตบ / Smash</span>
+                                    </label>
+                                    <span id="score-val-smash" class="text-sm font-extrabold text-brand-blue">8/10</span>
+                                </div>
+                                <div class="flex gap-1.5 overflow-x-auto pb-1" id="scale-smash">
+                                    <!-- 1 to 10 buttons -->
+                                </div>
+                            </div>
+
+                            <!-- Skill 2: Accuracy -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+                                        <i data-lucide="target" class="w-4 h-4 text-blue-500"></i>
+                                        <span>ความแม่นยำ / Accuracy</span>
+                                    </label>
+                                    <span id="score-val-accuracy" class="text-sm font-extrabold text-brand-blue">7/10</span>
+                                </div>
+                                <div class="flex gap-1.5 overflow-x-auto pb-1" id="scale-accuracy"></div>
+                            </div>
+
+                            <!-- Skill 3: Footwork -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+                                        <i data-lucide="footprints" class="w-4 h-4 text-emerald-500"></i>
+                                        <span>การเคลื่อนที่ / Footwork</span>
+                                    </label>
+                                    <span id="score-val-footwork" class="text-sm font-extrabold text-brand-blue">8/10</span>
+                                </div>
+                                <div class="flex gap-1.5 overflow-x-auto pb-1" id="scale-footwork"></div>
+                            </div>
+
+                            <!-- Skill 4: Defense -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+                                        <i data-lucide="shield" class="w-4 h-4 text-indigo-500"></i>
+                                        <span>เกมรับ / Defense</span>
+                                    </label>
+                                    <span id="score-val-defense" class="text-sm font-extrabold text-brand-blue">9/10</span>
+                                </div>
+                                <div class="flex gap-1.5 overflow-x-auto pb-1" id="scale-defense"></div>
+                            </div>
+
+                            <!-- Skill 5: Game Sense -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+                                        <i data-lucide="brain" class="w-4 h-4 text-purple-500"></i>
+                                        <span>การอ่านเกม / Game Sense</span>
+                                    </label>
+                                    <span id="score-val-game_sense" class="text-sm font-extrabold text-brand-blue">8/10</span>
+                                </div>
+                                <div class="flex gap-1.5 overflow-x-auto pb-1" id="scale-game_sense"></div>
+                            </div>
+
+                            <!-- Comment -->
+                            <div class="pt-2">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2" data-i18n="comment_optional">ข้อคิดเห็นหรือคำแนะนำ (Optional)</label>
+                                <textarea id="rate-comment" rows="2" placeholder="เช่น เกมรับเหนียวแน่นขึ้นมาก, ลูกตบคมหนัก..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Wizard Nav Buttons -->
+                        <div class="flex items-center justify-between pt-6 border-t border-slate-100">
+                            <button id="btn-rate-prev" onclick="ratePrevPlayer()" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all flex items-center space-x-2">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                                <span data-i18n="btn_prev">ย้อนกลับ</span>
+                            </button>
+                            <button id="btn-rate-next" onclick="rateNextPlayer()" class="px-6 py-2.5 bg-brand-blue hover:bg-brand-blueHover text-white font-bold rounded-xl transition-all shadow-md flex items-center space-x-2">
+                                <span id="btn-rate-next-text" data-i18n="btn_next">ถัดไป</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. SESSION RESULT VIEW -->
+                <div id="view-session_result" class="view-panel hidden max-w-3xl mx-auto space-y-6">
+                    <!-- Completion Header -->
+                    <div class="bg-white p-8 rounded-3xl border border-slate-100 card-shadow text-center space-y-4">
+                        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                            <i data-lucide="check-circle-2" class="w-10 h-10"></i>
+                        </div>
+                        <h2 class="text-2xl font-extrabold text-slate-900" data-i18n="session_result_completed">บันทึกคะแนนเรียบร้อย!</h2>
+                        <p class="text-slate-500 text-sm max-w-md mx-auto" data-i18n="session_result_completed_sub">ขอบคุณที่ร่วมประเมินฝีมือกับเพื่อนๆ ระบบได้คำนวณคะแนนเฉลี่ยสุทธิเรียบร้อยแล้ว</p>
+
+                        <!-- Circular Gauge Visualization -->
+                        <div class="py-4 flex justify-center items-center">
+                            <div class="relative w-44 h-44 flex items-center justify-center">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                    <path class="text-slate-100" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <path id="result-ring-path" class="text-brand-blue stroke-current transition-all duration-1000" stroke-width="3.5" stroke-dasharray="82, 100" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                </svg>
+                                <div class="absolute flex flex-col items-center">
+                                    <span id="result-overall-score" class="text-3xl font-extrabold text-slate-900">8.2</span>
+                                    <span class="text-xs font-bold text-slate-400">/ 10</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-center gap-3">
+                            <button onclick="navigateTo('dashboard')" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-sm transition-all">
+                                <span data-i18n="btn_back_home">กลับหน้าหลัก</span>
+                            </button>
+                            <button onclick="navigateTo('ranking')" class="px-5 py-2.5 bg-brand-blue hover:bg-brand-blueHover text-white font-bold rounded-xl text-sm transition-all shadow-md">
+                                <span data-i18n="btn_view_ranking">ดูอันดับรวม</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Session Leaderboard -->
+                    <div class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow space-y-4">
+                        <h3 class="font-bold text-lg text-slate-900" data-i18n="session_leaderboard">อันดับผู้เล่นในเซสชันนี้</h3>
+                        <div id="session-leaderboard-list" class="space-y-3">
+                            <!-- Leaderboard list rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. GLOBAL RANKING VIEW -->
+                <div id="view-ranking" class="view-panel hidden space-y-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900" data-i18n="ranking_header">อันดับเพื่อนในกลุ่ม</h2>
+                            <p class="text-slate-500 text-sm" data-i18n="ranking_subheader">จัดอันดับตามคะแนนเฉลี่ยจากการตีที่ผ่านการรับรอง</p>
+                        </div>
+                        <div class="flex items-center space-x-2 text-xs bg-amber-50 text-amber-800 border border-amber-200 px-3 py-2 rounded-xl">
+                            <i data-lucide="info" class="w-4 h-4 flex-shrink-0"></i>
+                            <span data-i18n="ranking_min_sessions_note">ต้องผ่านการตีอย่างน้อย 3 เซสชันขึ้นไปเพื่อแสดงในตารางอันดับอย่างเป็นทางการ</span>
+                        </div>
+                    </div>
+
+                    <!-- Ranking Skill Category Tabs -->
+                    <div class="flex overflow-x-auto gap-2 p-1.5 bg-slate-100 rounded-2xl custom-scrollbar" id="ranking-category-tabs">
+                        <button onclick="filterRankingTab('overall')" class="tab-rank flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all bg-brand-blue text-white shadow-sm" data-cat="overall" data-i18n="cat_overall">คะแนนรวม</button>
+                        <button onclick="filterRankingTab('smash')" class="tab-rank flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900" data-cat="smash" data-i18n="cat_smash">ลูกตบ</button>
+                        <button onclick="filterRankingTab('accuracy')" class="tab-rank flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900" data-cat="accuracy" data-i18n="cat_accuracy">ความแม่นยำ</button>
+                        <button onclick="filterRankingTab('footwork')" class="tab-rank flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900" data-cat="footwork" data-i18n="cat_footwork">Footwork</button>
+                        <button onclick="filterRankingTab('defense')" class="tab-rank flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900" data-cat="defense" data-i18n="cat_defense">เกมรับ</button>
+                        <button onclick="filterRankingTab('game_sense')" class="tab-rank flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900" data-cat="game_sense" data-i18n="cat_game_sense">การอ่านเกม</button>
+                    </div>
+
+                    <!-- Leaderboard Table Card -->
+                    <div class="bg-white rounded-3xl p-6 border border-slate-100 card-shadow">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-xs font-bold text-slate-400 uppercase border-b border-slate-100">
+                                        <th class="pb-3 px-3">อันดับ</th>
+                                        <th class="pb-3 px-3">ผู้เล่น</th>
+                                        <th class="pb-3 px-3">ระดับฝีมือ</th>
+                                        <th class="pb-3 px-3">เซสชัน</th>
+                                        <th class="pb-3 px-3 text-right">คะแนน</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ranking-table-body" class="divide-y divide-slate-50 text-sm">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 8. MEMBERS VIEW -->
+                <div id="view-members" class="view-panel hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900" data-i18n="members_header">รายชื่อสมาชิกทั้งหมด</h2>
+                            <p class="text-slate-500 text-sm" data-i18n="members_subheader">จัดการสมาชิกและดูประวัติของแต่ละคน</p>
+                        </div>
+                        <button id="btn-add-member" onclick="openMemberModal()" class="hidden px-5 py-2.5 bg-brand-blue hover:bg-brand-blueHover text-white font-semibold rounded-2xl transition-all shadow-md flex items-center space-x-2">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i>
+                            <span data-i18n="btn_add_member">+ เพิ่มสมาชิกใหม่</span>
+                        </button>
+                    </div>
+
+                    <div id="members-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- 9. PLAYER PROFILE VIEW -->
+                <div id="view-profile" class="view-panel hidden max-w-4xl mx-auto space-y-6">
+                    <!-- Profile Card Header -->
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 card-shadow flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 text-center md:text-left">
+                            <img id="prof-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" class="w-24 h-24 rounded-3xl object-cover border-4 border-slate-100 shadow-md" alt="Avatar">
+                            <div>
+                                <div class="flex items-center justify-center md:justify-start space-x-2">
+                                    <h2 id="prof-name" class="text-2xl font-extrabold text-slate-900">Nopchai</h2>
+                                    <span id="prof-level-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-brand-blue">
+                                        Advanced
+                                    </span>
+                                </div>
+                                <p id="prof-bio" class="text-slate-500 text-sm mt-1">มือขวา | ตีประจำสนาม A & B</p>
+                                <div class="flex items-center justify-center md:justify-start space-x-4 mt-3 text-xs text-slate-500">
+                                    <span>เซสชัน: <strong id="prof-session-count" class="text-slate-800">12</strong> ครั้ง</span>
+                                    <span>เข้าร่วม: <span id="prof-joined-date">ม.ค. 2026</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Big Overall Score Box -->
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center min-w-[160px]">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Overall Rating</span>
+                            <div class="text-4xl font-extrabold text-slate-900">
+                                <span id="prof-overall-score">8.2</span>
+                            </div>
+                            <span class="text-xs font-bold text-emerald-600 block mt-1">/ 10 คะแนน</span>
+                        </div>
+                    </div>
+
+                    <!-- 5 Skill Horizontal Progress Bars -->
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 card-shadow space-y-5">
+                        <h3 class="font-bold text-lg text-slate-900" data-i18n="prof_skill_breakdown">คะแนนแยกแต่ละด้าน</h3>
+                        
+                        <div class="space-y-4">
+                            <!-- Skill 1 -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-slate-700">ลูกตบ (Smash)</span>
+                                    <span id="prof-score-smash" class="font-extrabold text-slate-900">8.5</span>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div id="prof-bar-smash" class="bg-amber-500 h-full rounded-full transition-all duration-700" style="width: 85%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Skill 2 -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-slate-700">ความแม่นยำ (Accuracy)</span>
+                                    <span id="prof-score-accuracy" class="font-extrabold text-slate-900">7.8</span>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div id="prof-bar-accuracy" class="bg-blue-500 h-full rounded-full transition-all duration-700" style="width: 78%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Skill 3 -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-slate-700">การเคลื่อนที่ (Footwork)</span>
+                                    <span id="prof-score-footwork" class="font-extrabold text-slate-900">8.0</span>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div id="prof-bar-footwork" class="bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: 80%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Skill 4 -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-slate-700">เกมรับ (Defense)</span>
+                                    <span id="prof-score-defense" class="font-extrabold text-slate-900">8.3</span>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div id="prof-bar-defense" class="bg-indigo-500 h-full rounded-full transition-all duration-700" style="width: 83%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Skill 5 -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-slate-700">การอ่านเกม (Game Sense)</span>
+                                    <span id="prof-score-game_sense" class="font-extrabold text-slate-900">8.4</span>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div id="prof-bar-game_sense" class="bg-purple-500 h-full rounded-full transition-all duration-700" style="width: 84%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rating History Chart -->
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 card-shadow space-y-4">
+                        <h3 class="font-bold text-lg text-slate-900" data-i18n="prof_history_chart">คะแนนย้อนหลัง (Rating History)</h3>
+                        <div class="h-64">
+                            <canvas id="prof-history-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 10. REPORTS VIEW (ADMIN ONLY) -->
+                <div id="view-reports" class="view-panel hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">รายงานและสถิติภาพรวม</h2>
+                            <p class="text-slate-500 text-sm">วิเคราะห์การพัฒนาทักษะและข้อมูลเชิงลึกของผู้เล่นในกลุ่ม</p>
+                        </div>
+                        <button onclick="exportCSV()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl transition-all shadow-md flex items-center space-x-2">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>ส่งออกข้อมูล CSV</span>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow space-y-4">
+                            <h3 class="font-bold text-slate-900">กระจายการให้คะแนนตามหมวดหมู่</h3>
+                            <canvas id="reports-category-chart" class="max-h-64"></canvas>
+                        </div>
+                        <div class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow space-y-4">
+                            <h3 class="font-bold text-slate-900">เปรียบเทียบระดับฝีมือสมาชิก</h3>
+                            <canvas id="reports-level-chart" class="max-h-64"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 11. SETTINGS VIEW -->
+                <div id="view-settings" class="view-panel hidden max-w-3xl mx-auto space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900" data-i18n="settings_header">ตั้งค่าระบบ</h2>
+                        <p class="text-slate-500 text-sm" data-i18n="settings_subheader">กำหนดค่าเชื่อมต่อฐานข้อมูล Supabase และระดับทักษะ</p>
+                    </div>
+
+                    <!-- Supabase Connection Form -->
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 card-shadow space-y-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                <i data-lucide="database" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900">ตั้งค่า Supabase Backend</h3>
+                                <p class="text-xs text-slate-500">กรอก Project URL และ Anon Key เพื่อสลับจาก Mock Data ไปยัง Supabase Live DB</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Supabase URL</label>
+                                <input type="text" id="cfg-sb-url" placeholder="https://xyzcompany.supabase.co" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Supabase Anon Key</label>
+                                <input type="password" id="cfg-sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm">
+                            </div>
+                            <div class="flex gap-3 pt-2">
+                                <button onclick="saveSupabaseConfig()" class="px-5 py-2.5 bg-brand-blue text-white font-bold rounded-xl text-sm hover:bg-brand-blueHover transition-all shadow-md">
+                                    บันทึกการเชื่อมต่อ Supabase
+                                </button>
+                                <button onclick="resetToMockData()" class="px-5 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 transition-all">
+                                    ใช้งาน Mock Data ต่อไป
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Level Scale Info -->
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 card-shadow space-y-4">
+                        <h3 class="font-bold text-slate-900">เกณฑ์ระดับฝีมือ (Skill Levels)</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                <span class="font-bold text-slate-700 block">1.0 - 2.9</span>
+                                <span class="text-slate-500">Beginner (มือใหม่)</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                <span class="font-bold text-slate-700 block">3.0 - 4.9</span>
+                                <span class="text-slate-500">Novice (เริ่มเล่น)</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                <span class="font-bold text-slate-700 block">5.0 - 6.4</span>
+                                <span class="text-slate-500">Intermediate (ปานกลาง)</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                                <span class="font-bold text-brand-blue block">6.5 - 7.9</span>
+                                <span class="text-blue-700">Advanced (มือขวา)</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                                <span class="font-bold text-emerald-700 block">8.0 - 9.4</span>
+                                <span class="text-emerald-800">Expert (มืออาชีพ)</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-purple-50 border border-purple-100">
+                                <span class="font-bold text-purple-700 block">9.5 - 10.0</span>
+                                <span class="text-purple-800">Elite (ระดับท็อป)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 z-40 px-3 py-2 flex justify-around items-center">
+            <a href="#" onclick="navigateTo('dashboard'); return false;" id="mob-nav-dashboard" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-brand-blue transition-all">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span class="text-[10px] mt-1 font-medium" data-i18n="mob_home">หน้าหลัก</span>
+            </a>
+            <a href="#" onclick="navigateTo('sessions'); return false;" id="mob-nav-sessions" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-brand-blue transition-all">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span class="text-[10px] mt-1 font-medium" data-i18n="mob_sessions">เซสชัน</span>
+            </a>
+            <a href="#" onclick="navigateTo('ranking'); return false;" id="mob-nav-ranking" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-brand-blue transition-all">
+                <i data-lucide="trophy" class="w-5 h-5"></i>
+                <span class="text-[10px] mt-1 font-medium" data-i18n="mob_ranking">อันดับ</span>
+            </a>
+            <a href="#" onclick="navigateTo('members'); return false;" id="mob-nav-members" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-brand-blue transition-all">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span class="text-[10px] mt-1 font-medium" data-i18n="mob_members">ผู้เล่น</span>
+            </a>
+            <a href="#" onclick="navigateTo('profile'); return false;" id="mob-nav-profile" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-brand-blue transition-all">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="text-[10px] mt-1 font-medium" data-i18n="mob_profile">โปรไฟล์</span>
+            </a>
+        </nav>
+
+        <!-- Add/Edit Member Modal -->
+        <div id="modal-member" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl max-w-md w-full p-6 md:p-8 space-y-6 shadow-2xl relative">
+                <div class="flex items-center justify-between">
+                    <h3 id="modal-member-title" class="font-bold text-lg text-slate-900">เพิ่มสมาชิกใหม่</h3>
+                    <button onclick="closeMemberModal()" class="p-2 rounded-xl text-slate-400 hover:text-slate-700">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <form onsubmit="handleSaveMember(event)" class="space-y-4">
+                    <input type="hidden" id="mem-id">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ชื่อที่แสดง (Display Name)</label>
+                        <input type="text" id="mem-display-name" required placeholder="เช่น Nopchai" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ชื่อผู้ใช้งาน (Username)</label>
+                        <input type="text" id="mem-username" required placeholder="เช่น nopchai" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">รหัส PIN (4 หลัก)</label>
+                        <input type="password" id="mem-pin" required maxlength="6" placeholder="1234" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">รูปอวาตาร์ URL</label>
+                        <input type="url" id="mem-avatar" placeholder="https://images.unsplash.com/..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">คำอธิบายย่อ (Bio)</label>
+                        <input type="text" id="mem-bio" placeholder="เช่น มือขวา ชอบเล่นเกมเร็ว" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 text-sm">
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" onclick="closeMemberModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 transition-all">
+                            ยกเลิก
+                        </button>
+                        <button type="submit" class="flex-1 py-2.5 bg-brand-blue hover:bg-brand-blueHover text-white font-bold rounded-xl text-sm transition-all shadow-md">
+                            บันทึก
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* ====================================================================
+           1. GLOBAL APP STATE & MOCK SEED DATA
+           ==================================================================== */
+        const APP_STATE = {
+            currentUser: null, // { id, username, display_name, role: 'admin'|'member', avatar_url }
+            lang: 'TH',
+            currentView: 'login',
+            loginType: 'member', // 'member' or 'admin'
+            useSupabase: false,
+            supabaseClient: null,
+            
+            // In-Memory Data Store (Persisted to localStorage if offline)
+            members: [],
+            sessions: [],
+            ratings: [],
+            
+            // Session creation & rating wizard temp state
+            activeSession: null,
+            ratingTargets: [],
+            ratingIndex: 0,
+            currentRatings: {} // targetId -> { smash, accuracy, footwork, defense, game_sense, comment }
+        };
+
+        // Seed Members List
+        const SEED_MEMBERS = [
+            { id: 'm-admin', username: 'admin', display_name: 'System Admin', role: 'admin', pin: 'admin123', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', bio: 'ผู้ดูแลระบบสูงสุด', created_at: '2026-01-01' },
+            { id: 'm-nopchai', username: 'nopchai', display_name: 'Nopchai', role: 'member', pin: '1234', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', bio: 'มือขวา | ตีประจำสนาม A', created_at: '2026-01-10' },
+            { id: 'm-bank', username: 'bank', display_name: 'Bank', role: 'member', pin: '1234', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', bio: 'สายตบหนัก เล่นเกมเร็ว', created_at: '2026-01-12' },
+            { id: 'm-aof', username: 'aof', display_name: 'Aof', role: 'member', pin: '1234', avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150', bio: 'เกมรับเหนียว อ่านเกมเก่ง', created_at: '2026-01-15' },
+            { id: 'm-tom', username: 'tom', display_name: 'Tom', role: 'member', pin: '1234', avatar_url: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150', bio: 'ตบคม วิ่งทั่วคอร์ด', created_at: '2026-01-18' },
+            { id: 'm-golf', username: 'golf', display_name: 'Golf', role: 'member', pin: '1234', avatar_url: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150', bio: 'เน้นวางลูก แม่นยำสูง', created_at: '2026-01-20' }
+        ];
+
+        // Seed Past Sessions
+        const SEED_SESSIONS = [
+            {
+                id: 's-101',
+                session_date: '2026-10-02',
+                venue: 'สนาม A (Badminton Court A)',
+                players: ['m-nopchai', 'm-bank', 'm-aof'],
+                created_by: 'm-admin',
+                created_at: '2026-10-02'
+            },
+            {
+                id: 's-102',
+                session_date: '2026-09-28',
+                venue: 'สนาม B (Sports Complex)',
+                players: ['m-nopchai', 'm-bank', 'm-tom', 'm-aof'],
+                created_by: 'm-admin',
+                created_at: '2026-09-28'
+            },
+            {
+                id: 's-103',
+                session_date: '2026-09-25',
+                venue: 'สนาม A (Badminton Court A)',
+                players: ['m-nopchai', 'm-golf', 'm-aof'],
+                created_by: 'm-admin',
+                created_at: '2026-09-25'
+            },
+            {
+                id: 's-104',
+                session_date: '2026-09-20',
+                venue: 'สนาม C (Mega Arena)',
+                players: ['m-bank', 'm-tom', 'm-golf', 'm-nopchai'],
+                created_by: 'm-admin',
+                created_at: '2026-09-20'
+            }
+        ];
+
+        // Seed Ratings
+        const SEED_RATINGS = [
+            // Session 101 ratings
+            { id: 'r-1', session_id: 's-101', rater_id: 'm-nopchai', rated_member_id: 'm-bank', smash: 8, accuracy: 7, footwork: 8, defense: 9, game_sense: 8, comment: 'เกมรับเหนียวขึ้นเยอะ' },
+            { id: 'r-2', session_id: 's-101', rater_id: 'm-bank', rated_member_id: 'm-nopchai', smash: 9, accuracy: 8, footwork: 8, defense: 8, game_sense: 8, comment: 'ตบหนักมากวันนี' },
+            { id: 'r-3', session_id: 's-101', rater_id: 'm-aof', rated_member_id: 'm-nopchai', smash: 8, accuracy: 8, footwork: 8, defense: 9, game_sense: 9, comment: 'หยอดเนียนมาก' },
+            { id: 'r-4', session_id: 's-101', rater_id: 'm-nopchai', rated_member_id: 'm-aof', smash: 9, accuracy: 9, footwork: 9, defense: 9, game_sense: 9, comment: 'สุดยอดฟอร์มพีค' },
+            
+            // Historical aggregated ratings for chart & stats
+            { id: 'r-5', session_id: 's-102', rater_id: 'm-tom', rated_member_id: 'm-nopchai', smash: 8, accuracy: 7, footwork: 7, defense: 8, game_sense: 8, comment: '' },
+            { id: 'r-6', session_id: 's-103', rater_id: 'm-golf', rated_member_id: 'm-nopchai', smash: 9, accuracy: 9, footwork: 9, defense: 9, game_sense: 8, comment: '' },
+            { id: 'r-7', session_id: 's-104', rater_id: 'm-bank', rated_member_id: 'm-nopchai', smash: 8, accuracy: 7, footwork: 8, defense: 8, game_sense: 8, comment: '' }
+        ];
+
+        // I18n Dictionary
+        const DICTIONARY = {
+            TH: {
+                nav_dashboard: "หน้าหลัก",
+                nav_sessions: "เซสชันการตี",
+                nav_ranking: "อันดับสมาชิก",
+                nav_members: "รายชื่อเพื่อน",
+                nav_profile: "โปรไฟล์ของฉัน",
+                admin_section: "ผู้ดูแลระบบ",
+                nav_reports: "รายงานวิเคราะห์",
+                nav_settings: "ตั้งค่าระบบ",
+                login_title: "เข้าสู่ระบบ",
+                login_subtitle: "เลือกประเภทผู้ใช้งานและกรอกข้อมูลเพื่อเริ่มต้น",
+                username: "ชื่อผู้ใช้งาน",
+                password_or_pin: "รหัส PIN / รหัสผ่าน",
+                login_button: "เข้าสู่ระบบ",
+                quick_demo_login: "ทดสอบเข้าสู่ระบบแบบรวดเร็ว (Demo Quick Login)",
+                dash_subtitle: "พร้อมพัฒนาฝีมือและประเมินผลการตีแบดมินตันกันหรือยัง?",
+                btn_create_session: "สร้างเซสชันใหม่",
+                stat_avg_rating: "คะแนนเฉลี่ยรวม",
+                stat_total_sessions: "จำนวนครั้งที่ตี",
+                stat_group_members: "เพื่อนในกลุ่ม",
+                stat_level: "ระดับทักษะ",
+                times: "ครั้ง",
+                people: "คน",
+                recent_sessions_title: "การดีล่าสุด",
+                recent_sessions_sub: "ประวัติและคะแนนเฉลี่ยจากเพื่อนร่วมก๊วน",
+                view_all: "ดูทั้งหมด",
+                th_date: "วันที่",
+                th_venue: "สนาม",
+                th_players: "ผู้เล่น",
+                th_avg_score: "คะแนนเฉลี่ย",
+                skill_summary_title: "ภาพรวมทักษะ",
+                skill_summary_sub: "ประเมินผลแยกตาม 5 ด้านสำคัญ",
+                mob_home: "หน้าหลัก",
+                mob_sessions: "เซสชัน",
+                mob_ranking: "อันดับ",
+                mob_members: "ผู้เล่น",
+                mob_profile: "โปรไฟล์",
+                cat_overall: "คะแนนรวม",
+                cat_smash: "ลูกตบ",
+                cat_accuracy: "ความแม่นยำ",
+                cat_footwork: "Footwork",
+                cat_defense: "เกมรับ",
+                cat_game_sense: "การอ่านเกม",
+                teammate: "เพื่อนร่วมทีม",
+                btn_prev: "ย้อนกลับ",
+                btn_next: "ถัดไป",
+                btn_finish: "บันทึกคะแนนทั้งหมด",
+                comment_optional: "ข้อคิดเห็นหรือคำแนะนำ (Optional)",
+                session_result_completed: "บันทึกคะแนนเรียบร้อย!",
+                session_result_completed_sub: "ขอบคุณที่ร่วมประเมินฝีมือกับเพื่อนๆ ระบบได้คำนวณคะแนนเฉลี่ยสุทธิเรียบร้อยแล้ว",
+                btn_back_home: "กลับหน้าหลัก",
+                btn_view_ranking: "ดูอันดับรวม",
+                session_leaderboard: "อันดับผู้เล่นในเซสชันนี้",
+                ranking_header: "อันดับเพื่อนในกลุ่ม",
+                ranking_subheader: "จัดอันดับตามคะแนนเฉลี่ยจากการตีที่ผ่านการรับรอง",
+                ranking_min_sessions_note: "ต้องผ่านการตีอย่างน้อย 3 เซสชันขึ้นไปเพื่อแสดงในตารางอันดับอย่างเป็นทางการ",
+                members_header: "รายชื่อสมาชิกทั้งหมด",
+                members_subheader: "จัดการสมาชิกและดูประวัติของแต่ละคน",
+                btn_add_member: "+ เพิ่มสมาชิกใหม่",
+                prof_skill_breakdown: "คะแนนแยกแต่ละด้าน",
+                prof_history_chart: "คะแนนย้อนหลัง (Rating History)",
+                settings_header: "ตั้งค่าระบบ",
+                settings_subheader: "กำหนดค่าเชื่อมต่อฐานข้อมูล Supabase และระดับทักษะ",
+                logout: "ออกจากระบบ",
+                view_profile: "ดูโปรไฟล์",
+                settings: "ตั้งค่า"
+            },
+            EN: {
+                nav_dashboard: "Dashboard",
+                nav_sessions: "Sessions",
+                nav_ranking: "Rankings",
+                nav_members: "Members",
+                nav_profile: "My Profile",
+                admin_section: "Administration",
+                nav_reports: "Analytics",
+                nav_settings: "Settings",
+                login_title: "Sign In",
+                login_subtitle: "Choose your account type and credentials to start",
+                username: "Username",
+                password_or_pin: "PIN / Password",
+                login_button: "Sign In",
+                quick_demo_login: "Quick Demo One-Click Login",
+                dash_subtitle: "Ready to elevate your badminton performance today?",
+                btn_create_session: "Create Session",
+                stat_avg_rating: "Average Rating",
+                stat_total_sessions: "Sessions Played",
+                stat_group_members: "Group Members",
+                stat_level: "Skill Level",
+                times: "times",
+                people: "players",
+                recent_sessions_title: "Recent Sessions",
+                recent_sessions_sub: "History and peer rating averages",
+                view_all: "View All",
+                th_date: "Date",
+                th_venue: "Venue",
+                th_players: "Players",
+                th_avg_score: "Avg Score",
+                skill_summary_title: "Skill Overview",
+                skill_summary_sub: "Evaluation across 5 core attributes",
+                mob_home: "Home",
+                mob_sessions: "Sessions",
+                mob_ranking: "Ranking",
+                mob_members: "Players",
+                mob_profile: "Profile",
+                cat_overall: "Overall",
+                cat_smash: "Smash",
+                cat_accuracy: "Accuracy",
+                cat_footwork: "Footwork",
+                cat_defense: "Defense",
+                cat_game_sense: "Game Sense",
+                teammate: "Teammate",
+                btn_prev: "Previous",
+                btn_next: "Next",
+                btn_finish: "Submit Ratings",
+                comment_optional: "Feedback or Suggestions (Optional)",
+                session_result_completed: "Ratings Saved Successfully!",
+                session_result_completed_sub: "Thank you for rating your teammates. Overall scores have been updated.",
+                btn_back_home: "Back to Home",
+                btn_view_ranking: "View Leaderboard",
+                session_leaderboard: "Session Rankings",
+                ranking_header: "Group Leaderboard",
+                ranking_subheader: "Official rankings based on verified play sessions",
+                ranking_min_sessions_note: "At least 3 completed sessions are required for official ranking table placement",
+                members_header: "All Members",
+                members_subheader: "Manage badminton group members and view stats",
+                btn_add_member: "+ Add New Member",
+                prof_skill_breakdown: "Skill Attribute Breakdown",
+                prof_history_chart: "Rating Progression Chart",
+                settings_header: "System Settings",
+                settings_subheader: "Configure Supabase connection & skill levels",
+                logout: "Sign Out",
+                view_profile: "View Profile",
+                settings: "Settings"
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+        });
+
+        function initApp() {
+            // Load Local Storage or fallback to seeds
+            const localMem = localStorage.getItem('badminton_members');
+            const localSess = localStorage.getItem('badminton_sessions');
+            const localRat = localStorage.getItem('badminton_ratings');
+
+            APP_STATE.members = localMem ? JSON.parse(localMem) : SEED_MEMBERS;
+            APP_STATE.sessions = localSess ? JSON.parse(localSess) : SEED_SESSIONS;
+            APP_STATE.ratings = localRat ? JSON.parse(localRat) : SEED_RATINGS;
+
+            saveLocalState();
+
+            // Check saved session
+            const savedUser = localStorage.getItem('badminton_active_user');
+            if (savedUser) {
+                APP_STATE.currentUser = JSON.parse(savedUser);
+            }
+
+            // Check saved Supabase config
+            const sbUrl = localStorage.getItem('supabase_url');
+            const sbKey = localStorage.getItem('supabase_key');
+            if (sbUrl && sbKey && window.supabase) {
+                try {
+                    APP_STATE.supabaseClient = window.supabase.createClient(sbUrl, sbKey);
+                    APP_STATE.useSupabase = true;
+                    document.getElementById('data-source-text').textContent = "Supabase DB";
+                } catch(e) {
+                    console.error("Supabase Init Error", e);
+                }
+            }
+
+            // Lucide Icons
+            lucide.createIcons();
+
+            // Set Date default for session create
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('cs-date').value = today;
+
+            if (APP_STATE.currentUser) {
+                updateUserUI();
+                navigateTo('dashboard');
+            } else {
+                navigateTo('login');
+            }
+        }
+
+        function saveLocalState() {
+            localStorage.setItem('badminton_members', JSON.stringify(APP_STATE.members));
+            localStorage.setItem('badminton_sessions', JSON.stringify(APP_STATE.sessions));
+            localStorage.setItem('badminton_ratings', JSON.stringify(APP_STATE.ratings));
+        }
+
+        function navigateTo(viewName) {
+            APP_STATE.currentView = viewName;
+
+            // Hide all view panels
+            document.querySelectorAll('.view-panel').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+
+            // Show selected view
+            const target = document.getElementById(`view-${viewName}`);
+            if (target) {
+                target.classList.remove('hidden');
+            }
+
+            // Update Header Title
+            const titleEl = document.getElementById('page-title');
+            if (titleEl) {
+                const langDict = DICTIONARY[APP_STATE.lang];
+                const key = `nav_${viewName}`;
+                titleEl.textContent = langDict[key] || viewName.toUpperCase();
+            }
+
+            // Update Active Nav Highlights
+            updateActiveNavHighlight(viewName);
+
+            // Trigger view-specific renders
+            if (viewName === 'dashboard') renderDashboard();
+            if (viewName === 'sessions') renderSessionsList();
+            if (viewName === 'create_session') prepareCreateSessionForm();
+            if (viewName === 'ranking') renderRankingTable('overall');
+            if (viewName === 'members') renderMembersGrid();
+            if (viewName === 'profile') renderProfilePage(APP_STATE.currentUser?.id);
+            if (viewName === 'reports') renderReportsPage();
+
+            // Re-initialize Lucide Icons for dynamic content
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        function updateActiveNavHighlight(viewName) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('bg-brand-blue', 'text-white', 'shadow-md');
+                item.classList.add('text-slate-300');
+            });
+
+            const activeDesktop = document.getElementById(`nav-${viewName}`);
+            if (activeDesktop) {
+                activeDesktop.classList.add('bg-brand-blue', 'text-white', 'shadow-md');
+                activeDesktop.classList.remove('text-slate-300');
+            }
+        }
+
+        function toggleLanguage() {
+            APP_STATE.lang = APP_STATE.lang === 'TH' ? 'EN' : 'TH';
+            document.getElementById('current-lang-label').textContent = APP_STATE.lang;
+
+            const dict = DICTIONARY[APP_STATE.lang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key]) {
+                    el.textContent = dict[key];
+                }
+            });
+
+            // Re-render current view to adapt
+            navigateTo(APP_STATE.currentView);
+        }
+
+        function setLoginType(type) {
+            APP_STATE.loginType = type;
+            const btnMember = document.getElementById('tab-login-member');
+            const btnAdmin = document.getElementById('tab-login-admin');
+
+            if (type === 'member') {
+                btnMember.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white text-slate-800 shadow-sm";
+                btnAdmin.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 hover:text-slate-800";
+            } else {
+                btnAdmin.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white text-slate-800 shadow-sm";
+                btnMember.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 hover:text-slate-800";
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value.trim().toLowerCase();
+            const pwd = document.getElementById('login-password').value.trim();
+            const errEl = document.getElementById('login-error');
+
+            errEl.classList.add('hidden');
+
+            const found = APP_STATE.members.find(m => m.username.toLowerCase() === username && m.pin === pwd);
+
+            if (found) {
+                if (APP_STATE.loginType === 'admin' && found.role !== 'admin') {
+                    errEl.textContent = "บัญชีนี้ไม่มีสิทธิ์การใช้งานผู้ดูแลระบบ (Admin Required)";
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+
+                APP_STATE.currentUser = found;
+                localStorage.setItem('badminton_active_user', JSON.stringify(found));
+                updateUserUI();
+                navigateTo('dashboard');
+            } else {
+                errEl.textContent = "ชื่อผู้ใช้งานหรือรหัส PIN ไม่ถูกต้อง";
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        function quickLogin(target) {
+            if (target === 'admin') {
+                setLoginType('admin');
+                document.getElementById('login-username').value = 'admin';
+                document.getElementById('login-password').value = 'admin123';
+            } else {
+                setLoginType('member');
+                document.getElementById('login-username').value = target;
+                document.getElementById('login-password').value = '1234';
+            }
+            handleLogin(new Event('submit'));
+        }
+
+        function logout() {
+            APP_STATE.currentUser = null;
+            localStorage.removeItem('badminton_active_user');
+            navigateTo('login');
+        }
+
+        function updateUserUI() {
+            if (!APP_STATE.currentUser) return;
+            const u = APP_STATE.currentUser;
+
+            document.getElementById('sidebar-user-avatar').src = u.avatar_url;
+            document.getElementById('sidebar-user-name').textContent = u.display_name;
+            document.getElementById('sidebar-user-role').textContent = u.role === 'admin' ? 'ผู้ดูแลระบบ (Admin)' : 'สมาชิกกลุ่ม';
+
+            document.getElementById('top-user-avatar').src = u.avatar_url;
+            document.getElementById('dropdown-user-name').textContent = u.display_name;
+            document.getElementById('dropdown-user-sub').textContent = `@${u.username}`;
+
+            document.getElementById('dash-greeting-name').textContent = u.display_name;
+
+            // Show/Hide Admin specific features
+            const adminSec = document.getElementById('admin-nav-section');
+            const addMemBtn = document.getElementById('btn-add-member');
+
+            if (u.role === 'admin') {
+                if (adminSec) adminSec.classList.remove('hidden');
+                if (addMemBtn) addMemBtn.classList.remove('hidden');
+            } else {
+                if (adminSec) adminSec.classList.add('hidden');
+                if (addMemBtn) addMemBtn.classList.add('hidden');
+            }
+        }
+
+        function toggleUserDropdown() {
+            const dd = document.getElementById('user-dropdown');
+            dd.classList.toggle('hidden');
+        }
+
+        function hideUserDropdown() {
+            document.getElementById('user-dropdown').classList.add('hidden');
+        }
+
+        function calculatePlayerStats(memberId) {
+            // Find all ratings received by this member
+            const received = APP_STATE.ratings.filter(r => r.rated_member_id === memberId);
+            
+            if (received.length === 0) {
+                return {
+                    overall: 0.0,
+                    smash: 0.0,
+                    accuracy: 0.0,
+                    footwork: 0.0,
+                    defense: 0.0,
+                    game_sense: 0.0,
+                    sessionsCount: 0,
+                    ratingsCount: 0,
+                    level: 'Beginner'
+                };
+            }
+
+            let sumSmash = 0, sumAcc = 0, sumFoot = 0, sumDef = 0, sumGame = 0;
+            received.forEach(r => {
+                sumSmash += r.smash || 0;
+                sumAcc += r.accuracy || 0;
+                sumFoot += r.footwork || 0;
+                sumDef += r.defense || 0;
+                sumGame += r.game_sense || 0;
+            });
+
+            const count = received.length;
+            const avgSmash = +(sumSmash / count).toFixed(1);
+            const avgAcc = +(sumAcc / count).toFixed(1);
+            const avgFoot = +(sumFoot / count).toFixed(1);
+            const avgDef = +(sumDef / count).toFixed(1);
+            const avgGame = +(sumGame / count).toFixed(1);
+
+            const overall = +((avgSmash + avgAcc + avgFoot + avgDef + avgGame) / 5).toFixed(1);
+
+            // Sessions played
+            const playerSessions = APP_STATE.sessions.filter(s => s.players.includes(memberId));
+
+            return {
+                overall,
+                smash: avgSmash,
+                accuracy: avgAcc,
+                footwork: avgFoot,
+                defense: avgDef,
+                game_sense: avgGame,
+                sessionsCount: playerSessions.length,
+                ratingsCount: count,
+                level: getLevelTitle(overall)
+            };
+        }
+
+        function getLevelTitle(score) {
+            if (score >= 9.5) return 'Elite';
+            if (score >= 8.0) return 'Expert';
+            if (score >= 6.5) return 'Advanced';
+            if (score >= 5.0) return 'Intermediate';
+            if (score >= 3.0) return 'Novice';
+            return 'Beginner';
+        }
+
+        let dashChartInstance = null;
+
+        function renderDashboard() {
+            const user = APP_STATE.currentUser;
+            if (!user) return;
+
+            const stats = calculatePlayerStats(user.id);
+
+            document.getElementById('dash-stat-score').textContent = stats.overall || '8.2';
+            document.getElementById('dash-stat-sessions').textContent = stats.sessionsCount || '12';
+            document.getElementById('dash-stat-members').textContent = APP_STATE.members.length;
+            document.getElementById('dash-stat-level-badge').textContent = stats.level;
+
+            // Render Recent Sessions Table
+            const tbody = document.getElementById('dash-sessions-tbody');
+            tbody.innerHTML = '';
+
+            const recent = APP_STATE.sessions.slice(0, 5);
+
+            recent.forEach(sess => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition-all';
+
+                // Avatars stack
+                const avatarsHtml = sess.players.map(pid => {
+                    const m = APP_STATE.members.find(x => x.id === pid);
+                    return `<img src="${m?.avatar_url || 'https://placehold.co/100'}" class="w-7 h-7 rounded-full object-cover border-2 border-white -ml-2 font-bold flex-shrink-0" title="${m?.display_name}">`;
+                }).join('');
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-2 font-semibold text-slate-800">${sess.session_date}</td>
+                    <td class="py-3.5 px-2 text-slate-600">${sess.venue}</td>
+                    <td class="py-3.5 px-2">
+                        <div class="flex items-center pl-2">${avatarsHtml}</div>
+                    </td>
+                    <td class="py-3.5 px-2 text-right font-extrabold text-emerald-600">8.2</td>
+                    <td class="py-3.5 px-2 text-right">
+                        <button onclick="viewSessionResult('${sess.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-brand-blue hover:bg-slate-100">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Render Radar Skill Chart
+            renderDashSkillChart(stats);
+        }
+
+        function renderDashSkillChart(stats) {
+            const ctx = document.getElementById('dash-skill-chart');
+            if (!ctx) return;
+
+            if (dashChartInstance) {
+                dashChartInstance.destroy();
+            }
+
+            dashChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Smash', 'Accuracy', 'Footwork', 'Defense', 'Game Sense'],
+                    datasets: [{
+                        label: 'ทักษะของคุณ',
+                        data: [stats.smash || 8.5, stats.accuracy || 7.8, stats.footwork || 8.0, stats.defense || 8.3, stats.game_sense || 8.4],
+                        backgroundColor: 'rgba(22, 119, 255, 0.15)',
+                        borderColor: '#1677FF',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#1677FF'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 10,
+                            ticks: { display: false, stepSize: 2 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderSessionsList() {
+            const container = document.getElementById('sessions-list-container');
+            container.innerHTML = '';
+
+            if (APP_STATE.sessions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 space-y-3">
+                        <i data-lucide="calendar" class="w-12 h-12 mx-auto stroke-1"></i>
+                        <p class="text-sm font-medium">ยังไม่มีรายการเซสชันการตี</p>
+                    </div>
+                `;
+                return;
+            }
+
+            APP_STATE.sessions.forEach(sess => {
+                const item = document.createElement('div');
+                item.className = 'p-5 rounded-2xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 hover:bg-white transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 card-shadow';
+
+                const playerAvatars = sess.players.map(pid => {
+                    const m = APP_STATE.members.find(x => x.id === pid);
+                    return `<img src="${m?.avatar_url}" class="w-8 h-8 rounded-full object-cover border-2 border-white -ml-2 shadow-sm" title="${m?.display_name}">`;
+                }).join('');
+
+                item.innerHTML = `
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center font-bold flex-shrink-0">
+                            <i data-lucide="activity" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-900">${sess.venue}</h4>
+                            <p class="text-xs text-slate-500 mt-0.5">วันที่: ${sess.session_date}</p>
+                            <div class="flex items-center pl-2 mt-3">${playerAvatars}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
+                        <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">เสร็จสิ้น</span>
+                        <button onclick="viewSessionResult('${sess.id}')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-all">
+                            ดูผลคะแนน
+                        </button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function prepareCreateSessionForm() {
+            const container = document.getElementById('cs-players-checkboxes');
+            container.innerHTML = '';
+
+            APP_STATE.members.forEach(m => {
+                const isMe = m.id === APP_STATE.currentUser?.id;
+                const div = document.createElement('label');
+                div.className = 'flex items-center space-x-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer';
+
+                div.innerHTML = `
+                    <input type="checkbox" name="cs_player" value="${m.id}" ${isMe ? 'checked disabled' : ''} class="w-4 h-4 text-brand-blue rounded border-slate-300 focus:ring-brand-blue">
+                    <img src="${m.avatar_url}" class="w-7 h-7 rounded-full object-cover">
+                    <span class="text-xs font-bold text-slate-800">${m.display_name} ${isMe ? '(เรา)' : ''}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function handleCreateSession(e) {
+            e.preventDefault();
+            const date = document.getElementById('cs-date').value;
+            const venue = document.getElementById('cs-venue').value;
+            const notes = document.getElementById('cs-notes').value;
+
+            // Get selected players
+            const checked = Array.from(document.querySelectorAll('input[name="cs_player"]:checked')).map(cb => cb.value);
+
+            if (!checked.includes(APP_STATE.currentUser.id)) {
+                checked.push(APP_STATE.currentUser.id);
+            }
+
+            if (checked.length < 2) {
+                alert('โปรดเลือกผู้เล่นเข้าร่วมอย่างน้อย 2 คน');
+                return;
+            }
+
+            const newSession = {
+                id: `s-${Date.now()}`,
+                session_date: date,
+                venue: venue,
+                players: checked,
+                created_by: APP_STATE.currentUser.id,
+                created_at: new Date().toISOString()
+            };
+
+            APP_STATE.sessions.unshift(newSession);
+            saveLocalState();
+
+            // Start Rating Wizard for target players (excluding current user)
+            startRatingWizard(newSession);
+        }
+
+        function startRatingWizard(session) {
+            APP_STATE.activeSession = session;
+            // Filter out self! Players cannot rate themselves
+            APP_STATE.ratingTargets = session.players.filter(pid => pid !== APP_STATE.currentUser.id);
+            APP_STATE.ratingIndex = 0;
+            APP_STATE.currentRatings = {};
+
+            if (APP_STATE.ratingTargets.length === 0) {
+                alert('ไม่สามารถประเมินตนเองได้');
+                navigateTo('dashboard');
+                return;
+            }
+
+            renderRatingStep();
+            navigateTo('rate_wizard');
+        }
+
+        function renderRatingStep() {
+            const targetId = APP_STATE.ratingTargets[APP_STATE.ratingIndex];
+            const targetMember = APP_STATE.members.find(m => m.id === targetId);
+
+            document.getElementById('rate-step-indicator').textContent = `ประเมินผู้เล่น ${APP_STATE.ratingIndex + 1} จาก ${APP_STATE.ratingTargets.length}`;
+            document.getElementById('rate-target-name').textContent = targetMember.display_name;
+            document.getElementById('rate-player-display-name').textContent = targetMember.display_name;
+            document.getElementById('rate-player-avatar').src = targetMember.avatar_url;
+
+            const progressPct = ((APP_STATE.ratingIndex + 1) / APP_STATE.ratingTargets.length) * 100;
+            document.getElementById('rate-progress-bar').style.width = `${progressPct}%`;
+
+            // Existing rating draft for this target or default
+            if (!APP_STATE.currentRatings[targetId]) {
+                APP_STATE.currentRatings[targetId] = {
+                    smash: 8,
+                    accuracy: 8,
+                    footwork: 8,
+                    defense: 8,
+                    game_sense: 8,
+                    comment: ''
+                };
+            }
+
+            const draft = APP_STATE.currentRatings[targetId];
+
+            // Render 1 to 10 Scale Buttons for 5 skills
+            const categories = ['smash', 'accuracy', 'footwork', 'defense', 'game_sense'];
+            categories.forEach(cat => {
+                const container = document.getElementById(`scale-${cat}`);
+                container.innerHTML = '';
+                document.getElementById(`score-val-${cat}`).textContent = `${draft[cat]}/10`;
+
+                for (let i = 1; i <= 10; i++) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    const isSelected = draft[cat] === i;
+                    btn.className = `w-8 h-9 rounded-lg font-bold text-xs flex-shrink-0 transition-all ${
+                        isSelected 
+                        ? 'bg-brand-blue text-white shadow-md scale-105' 
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    }`;
+                    btn.textContent = i;
+                    btn.onclick = () => {
+                        draft[cat] = i;
+                        renderRatingStep();
+                    };
+                    container.appendChild(btn);
+                }
+            });
+
+            document.getElementById('rate-comment').value = draft.comment;
+            document.getElementById('rate-comment').oninput = (e) => {
+                draft.comment = e.target.value;
+            };
+
+            // Buttons Prev/Next
+            const prevBtn = document.getElementById('btn-rate-prev');
+            if (APP_STATE.ratingIndex === 0) {
+                prevBtn.classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                prevBtn.classList.remove('opacity-50', 'pointer-events-none');
+            }
+
+            const nextBtnText = document.getElementById('btn-rate-next-text');
+            if (APP_STATE.ratingIndex === APP_STATE.ratingTargets.length - 1) {
+                nextBtnText.textContent = DICTIONARY[APP_STATE.lang].btn_finish;
+            } else {
+                nextBtnText.textContent = DICTIONARY[APP_STATE.lang].btn_next;
+            }
+        }
+
+        function ratePrevPlayer() {
+            if (APP_STATE.ratingIndex > 0) {
+                APP_STATE.ratingIndex--;
+                renderRatingStep();
+            }
+        }
+
+        function rateNextPlayer() {
+            if (APP_STATE.ratingIndex < APP_STATE.ratingTargets.length - 1) {
+                APP_STATE.ratingIndex++;
+                renderRatingStep();
+            } else {
+                // Submit All Ratings for session
+                finishSessionRatings();
+            }
+        }
+
+        function finishSessionRatings() {
+            const sessionId = APP_STATE.activeSession.id;
+            const raterId = APP_STATE.currentUser.id;
+
+            Object.keys(APP_STATE.currentRatings).forEach(targetId => {
+                const draft = APP_STATE.currentRatings[targetId];
+                const newRating = {
+                    id: `r-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                    session_id: sessionId,
+                    rater_id: raterId,
+                    rated_member_id: targetId,
+                    smash: draft.smash,
+                    accuracy: draft.accuracy,
+                    footwork: draft.footwork,
+                    defense: draft.defense,
+                    game_sense: draft.game_sense,
+                    comment: draft.comment,
+                    created_at: new Date().toISOString()
+                };
+                APP_STATE.ratings.push(newRating);
+            });
+
+            saveLocalState();
+            viewSessionResult(sessionId);
+        }
+
+        function viewSessionResult(sessionId) {
+            const sess = APP_STATE.sessions.find(s => s.id === sessionId);
+            if (!sess) return;
+
+            // Render Session Leaderboard
+            const container = document.getElementById('session-leaderboard-list');
+            container.innerHTML = '';
+
+            const playerStats = sess.players.map(pid => {
+                const member = APP_STATE.members.find(m => m.id === pid);
+                const stats = calculatePlayerStats(pid);
+                return { member, stats };
+            });
+
+            // Sort by score descending
+            playerStats.sort((a, b) => b.stats.overall - a.stats.overall);
+
+            const medals = ['🥇', '🥈', '🥉'];
+
+            playerStats.forEach((ps, idx) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/60 hover:bg-white transition-all';
+
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="w-8 font-extrabold text-slate-700 text-center text-lg">${medals[idx] || (idx + 1)}</span>
+                        <img src="${ps.member.avatar_url}" class="w-10 h-10 rounded-full object-cover border border-slate-200">
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm">${ps.member.display_name}</h4>
+                            <span class="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-brand-blue font-semibold">${ps.stats.level}</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xl font-extrabold text-slate-900">${ps.stats.overall}</span>
+                        <span class="text-xs text-slate-400 block">/ 10</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            navigateTo('session_result');
+        }
+
+        function filterRankingTab(category) {
+            document.querySelectorAll('.tab-rank').forEach(btn => {
+                if (btn.getAttribute('data-cat') === category) {
+                    btn.className = 'tab-rank flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all bg-brand-blue text-white shadow-sm';
+                } else {
+                    btn.className = 'tab-rank flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900';
+                }
+            });
+
+            renderRankingTable(category);
+        }
+
+        function renderRankingTable(category) {
+            const tbody = document.getElementById('ranking-table-body');
+            tbody.innerHTML = '';
+
+            const list = APP_STATE.members.map(m => {
+                const stats = calculatePlayerStats(m.id);
+                return { member: m, stats };
+            });
+
+            // Filter out members with insufficient sessions if strictly enforcing rule (>0 for mock)
+            // Sort by category score descending
+            list.sort((a, b) => (b.stats[category] || b.stats.overall) - (a.stats[category] || a.stats.overall));
+
+            const medals = ['🥇', '🥈', '🥉'];
+
+            list.forEach((item, idx) => {
+                const score = item.stats[category] || item.stats.overall;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-all cursor-pointer';
+                tr.onclick = () => renderProfilePage(item.member.id);
+
+                tr.innerHTML = `
+                    <td class="py-4 px-3 font-extrabold text-slate-800">${medals[idx] || (idx + 1)}</td>
+                    <td class="py-4 px-3">
+                        <div class="flex items-center space-x-3">
+                            <img src="${item.member.avatar_url}" class="w-9 h-9 rounded-full object-cover">
+                            <div>
+                                <p class="font-bold text-slate-900">${item.member.display_name}</p>
+                                <p class="text-xs text-slate-400">@${item.member.username}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-4 px-3">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-brand-blue border border-blue-100">
+                            ${item.stats.level}
+                        </span>
+                    </td>
+                    <td class="py-4 px-3 text-slate-600 font-medium">${item.stats.sessionsCount} ครั้ง</td>
+                    <td class="py-4 px-3 text-right">
+                        <span class="text-lg font-extrabold text-slate-900">${score}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderMembersGrid() {
+            const grid = document.getElementById('members-grid');
+            grid.innerHTML = '';
+
+            APP_STATE.members.forEach(m => {
+                const stats = calculatePlayerStats(m.id);
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-3xl p-6 border border-slate-100 card-shadow space-y-4 relative flex flex-col justify-between';
+
+                card.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <img src="${m.avatar_url}" class="w-14 h-14 rounded-2xl object-cover border-2 border-slate-100 shadow-sm">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
+                                ${stats.level}
+                            </span>
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-slate-900 text-lg">${m.display_name}</h3>
+                            <p class="text-xs text-slate-400">@${m.username}</p>
+                            <p class="text-xs text-slate-500 mt-2 line-clamp-2">${m.bio || 'ไม่มีคำอธิบาย'}</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-slate-400 block">Overall Score</span>
+                            <span class="text-xl font-extrabold text-slate-900">${stats.overall}</span>
+                        </div>
+                        <button onclick="renderProfilePage('${m.id}')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-all">
+                            ดูโปรไฟล์
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function openMemberModal() {
+            document.getElementById('modal-member-title').textContent = 'เพิ่มสมาชิกใหม่';
+            document.getElementById('mem-id').value = '';
+            document.getElementById('mem-display-name').value = '';
+            document.getElementById('mem-username').value = '';
+            document.getElementById('mem-pin').value = '1234';
+            document.getElementById('mem-avatar').value = '';
+            document.getElementById('mem-bio').value = '';
+            document.getElementById('modal-member').classList.remove('hidden');
+        }
+
+        function closeMemberModal() {
+            document.getElementById('modal-member').classList.add('hidden');
+        }
+
+        function handleSaveMember(e) {
+            e.preventDefault();
+            const id = document.getElementById('mem-id').value || `m-${Date.now()}`;
+            const displayName = document.getElementById('mem-display-name').value;
+            const username = document.getElementById('mem-username').value;
+            const pin = document.getElementById('mem-pin').value;
+            const avatar = document.getElementById('mem-avatar').value || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+            const bio = document.getElementById('mem-bio').value;
+
+            const existingIdx = APP_STATE.members.findIndex(x => x.id === id);
+            const newMem = {
+                id,
+                username,
+                display_name: displayName,
+                role: 'member',
+                pin,
+                avatar_url: avatar,
+                bio,
+                created_at: new Date().toISOString()
+            };
+
+            if (existingIdx >= 0) {
+                APP_STATE.members[existingIdx] = newMem;
+            } else {
+                APP_STATE.members.push(newMem);
+            }
+
+            saveLocalState();
+            closeMemberModal();
+            renderMembersGrid();
+        }
+
+        let profChartInstance = null;
+
+        function renderProfilePage(memberId) {
+            const member = APP_STATE.members.find(m => m.id === memberId) || APP_STATE.currentUser;
+            if (!member) return;
+
+            const stats = calculatePlayerStats(member.id);
+
+            document.getElementById('prof-avatar').src = member.avatar_url;
+            document.getElementById('prof-name').textContent = member.display_name;
+            document.getElementById('prof-bio').textContent = member.bio || 'ผู้ร่วมทีมตีแบดมินตัน';
+            document.getElementById('prof-session-count').textContent = stats.sessionsCount;
+            document.getElementById('prof-overall-score').textContent = stats.overall;
+            document.getElementById('prof-level-badge').textContent = stats.level;
+
+            // Update 5 Skill Progress Bars
+            const skills = ['smash', 'accuracy', 'footwork', 'defense', 'game_sense'];
+            skills.forEach(s => {
+                const val = stats[s] || 8.0;
+                document.getElementById(`prof-score-${s}`).textContent = val;
+                document.getElementById(`prof-bar-${s}`).style.width = `${val * 10}%`;
+            });
+
+            // Render Rating Progression Line Chart
+            renderProfileChart();
+
+            navigateTo('profile');
+        }
+
+        function renderProfileChart() {
+            const ctx = document.getElementById('prof-history-chart');
+            if (!ctx) return;
+
+            if (profChartInstance) {
+                profChartInstance.destroy();
+            }
+
+            profChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['ครั้งที่ 1', 'ครั้งที่ 2', 'ครั้งที่ 3', 'ครั้งที่ 4', 'ครั้งที่ 5'],
+                    datasets: [{
+                        label: 'คะแนนเฉลี่ย',
+                        data: [6.2, 6.8, 7.1, 7.5, 8.2],
+                        borderColor: '#1677FF',
+                        backgroundColor: 'rgba(22, 119, 255, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { min: 0, max: 10 }
+                    }
+                }
+            });
+        }
+
+        function renderReportsPage() {
+            // Additional analytical charts rendering
+        }
+
+        function exportCSV() {
+            let csv = 'Rating ID,Session ID,Rater,Rated Member,Smash,Accuracy,Footwork,Defense,Game Sense,Comment\n';
+            APP_STATE.ratings.forEach(r => {
+                csv += `"${r.id}","${r.session_id}","${r.rater_id}","${r.rated_member_id}",${r.smash},${r.accuracy},${r.footwork},${r.defense},${r.game_sense},"${r.comment || ''}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `badminton_ratings_export_${Date.now()}.csv`;
+            link.click();
+        }
+
+        function saveSupabaseConfig() {
+            const url = document.getElementById('cfg-sb-url').value.trim();
+            const key = document.getElementById('cfg-sb-key').value.trim();
+
+            if (!url || !key) {
+                alert('กรุณากรอกข้อมูล Supabase URL และ Anon Key ให้ครบถ้วน');
+                return;
+            }
+
+            localStorage.setItem('supabase_url', url);
+            localStorage.setItem('supabase_key', key);
+            location.reload();
+        }
+
+        function resetToMockData() {
+            localStorage.removeItem('supabase_url');
+            localStorage.removeItem('supabase_key');
+            location.reload();
+        }
+    </script>
+</body>
+</html>
